@@ -1,0 +1,147 @@
+diff --git a/cmd/geth/cvm_config.go b/cmd/geth/cvm_config.go
+new file mode 100644
+index 000000000..effeee9ab
+--- /dev/null
++++ b/cmd/geth/cvm_config.go
+@@ -0,0 +1,124 @@
++package main
++
++import (
++	"encoding/base64"
++	"errors"
++	"io"
++	"os"
++	"net/http"
++	"net/url"
++	"strings"
++
++	"github.com/ethereum/go-ethereum/cmd/utils"
++	"github.com/ethereum/go-ethereum/common/hexutil"
++	"github.com/naoina/toml"
++	"github.com/urfave/cli/v2"
++)
++
++// Config is the configuration parameters added via Confidential VM user data
++type UserData struct {
++	JwtSecret           string // JWT secret to use for authenticated RPC endpoints
++	BuilderSecretKey    string // Builder key used for signing blocks
++	BuilderTxSigningKey string // Signing key of builder coinbase to make transaction to validator
++	BuilderBeaconEndpoints string // Comma separated list of beacon endpoints to connect to for beacon chain data
++}
++
++func GetUserData() (*UserData, error) {
++	url := os.Getenv("USER_DATA_URL")
++	if len(url) == 0 {
++		url = "http://169.254.169.254/metadata/instance/compute/userData?api-version=2021-01-01&format=text"
++	}
++	return getUserData(url)
++}
++
++func getUserData(url string) (*UserData, error) {
++	client := &http.Client{}
++	req, err := http.NewRequest("GET", url, nil)
++	if err != nil {
++		return nil, err
++	}
++	req.Header.Set("Metadata", "true")
++
++	resp, err := client.Do(req)
++	if err != nil {
++		return nil, err
++	}
++	defer resp.Body.Close()
++
++	bodyText, err := io.ReadAll(resp.Body)
++	if err != nil {
++		return nil, err
++	}
++
++	tomlBody, err := base64.StdEncoding.DecodeString(string(bodyText))
++	if err != nil {
++		return nil, err
++	}
++
++	var data UserData
++	if err = toml.Unmarshal(tomlBody, &data); err != nil {
++		return nil, err
++	}
++
++	return &data, nil
++}
++
++func verify(hexString string) error {
++	data, err := hexutil.Decode(hexString)
++	if err != nil {
++                return err
++        }
++
++	if len(data) != 32 {
++		return errors.New("Length of data != 32")
++	}
++
++	return nil
++}
++
++func verifyBeaconEndpoints(beaconEndpoints string) error {
++	endpoints := strings.Split(beaconEndpoints, ",")
++
++	for _, endpoint := range endpoints {
++		if _, err := url.ParseRequestURI(endpoint); err != nil {
++			return err
++		}
++	}
++
++	return nil
++}
++
++func (d *UserData) write(ctx *cli.Context) error {
++	// TODO: passing unchecked string into this method:
++	// https://github.com/flashbots/builder/blob/460b5d59166734cbcec2d75ccec8d262e72ff707/miner/miner.go#L116
++	if err := verify(d.BuilderSecretKey); err != nil {
++                return err
++        }
++	ctx.Set(utils.BuilderSecretKey.Name, d.BuilderSecretKey)
++
++	// TODO: passing unchecked string into this method:
++	// https://github.com/ConsenSys/gnark-crypto/blob/441dc0ffe639294b8d09e394f24ba7575577229c/ecc/bls12-381/marshal.go#L754
++	if err := verify(d.BuilderTxSigningKey); err != nil {
++                return err
++        }
++	os.Setenv("BUILDER_TX_SIGNING_KEY", d.BuilderTxSigningKey)
++
++	if err := verify(d.JwtSecret); err != nil {
++                return err
++        }
++	fileName := ctx.String(utils.JWTSecretFlag.Name)
++	if len(fileName) == 0 {
++		return errors.New("Default JWT path not supported, set a custom path")
++		//fileName = "jwtsecret" // Path within the datadir to the node's jwt secret
++	}
++	if err := os.WriteFile(fileName, []byte(d.JwtSecret), 0600); err != nil {
++                return err
++        }
++
++	if err := verifyBeaconEndpoints(d.BuilderBeaconEndpoints); err != nil {
++                return err
++        }
++	ctx.Set(utils.BuilderBeaconEndpoints.Name, d.BuilderBeaconEndpoints)
++
++	return nil
++}
+diff --git a/cmd/geth/main.go b/cmd/geth/main.go
+index 1914afefa..9225d52e2 100644
+--- a/cmd/geth/main.go
++++ b/cmd/geth/main.go
+@@ -367,6 +367,12 @@ func geth(ctx *cli.Context) error {
+ 		return fmt.Errorf("invalid command: %q", args[0])
+ 	}
+ 
++	if userData, err := GetUserData(); err != nil {
++		return err
++	} else if err = userData.write(ctx); err != nil {
++		return err
++	}
++
+ 	prepare(ctx)
+ 	stack, backend := makeFullNode(ctx)
+ 	defer stack.Close()

@@ -1,0 +1,67 @@
+diff --git a/cmd/geth/main.go b/cmd/geth/main.go
+index 1914afefa..c983bb6bb 100644
+--- a/cmd/geth/main.go
++++ b/cmd/geth/main.go
+@@ -179,6 +179,7 @@ var (
+ 		utils.BuilderRateLimitMaxBurst,
+ 		utils.BuilderBlockResubmitInterval,
+ 		utils.BuilderEnableCancellations,
++		utils.BuilderEnableEphemeralDB,
+ 	}
+ 
+ 	rpcFlags = []cli.Flag{
+diff --git a/cmd/utils/flags.go b/cmd/utils/flags.go
+index d2231a837..465bb4423 100644
+--- a/cmd/utils/flags.go
++++ b/cmd/utils/flags.go
+@@ -841,6 +841,13 @@ var (
+ 		Category: flags.BuilderCategory,
+ 	}
+ 
++	// Builder TEE settings
++	BuilderEnableEphemeralDB = &cli.BoolFlag{
++		Name:     "builder.ephemeral_db",
++		Usage:     "Enable ephemeral db",
++		Category: flags.BuilderCategory,
++	}
++
+ 	// RPC settings
+ 	IPCDisabledFlag = &cli.BoolFlag{
+ 		Name:     "ipcdisable",
+@@ -1735,7 +1742,7 @@ func SetDataDir(ctx *cli.Context, cfg *node.Config) {
+ 	switch {
+ 	case ctx.IsSet(DataDirFlag.Name):
+ 		cfg.DataDir = ctx.String(DataDirFlag.Name)
+-	case ctx.Bool(DeveloperFlag.Name):
++	case ctx.Bool(DeveloperFlag.Name) || ctx.Bool(BuilderEnableEphemeralDB.Name):
+ 		cfg.DataDir = "" // unless explicitly requested, use memory databases
+ 	case ctx.Bool(RinkebyFlag.Name) && cfg.DataDir == node.DefaultDataDir():
+ 		cfg.DataDir = filepath.Join(node.DefaultDataDir(), "rinkeby")
+diff --git a/core/rawdb/database.go b/core/rawdb/database.go
+index 6c545032f..5096f95de 100644
+--- a/core/rawdb/database.go
++++ b/core/rawdb/database.go
+@@ -311,6 +311,10 @@ func NewMemoryDatabaseWithCap(size int) ethdb.Database {
+ 	return NewDatabase(memorydb.NewWithCap(size))
+ }
+ 
++func NewMemoryDatabaseWithFreezer(ancient string, namespace string, readonly bool) (ethdb.Database, error) {
++	return NewDatabaseWithFreezer(memorydb.New(), ancient, namespace, readonly)
++}
++
+ // NewLevelDBDatabase creates a persistent key-value database without a freezer
+ // moving immutable chain segments into cold storage.
+ func NewLevelDBDatabase(file string, cache int, handles int, namespace string, readonly bool) (ethdb.Database, error) {
+diff --git a/node/node.go b/node/node.go
+index 2f89bc1ad..53f0b4db2 100644
+--- a/node/node.go
++++ b/node/node.go
+@@ -739,7 +739,7 @@ func (n *Node) OpenDatabaseWithFreezer(name string, cache, handles int, ancient
+ 	var db ethdb.Database
+ 	var err error
+ 	if n.config.DataDir == "" {
+-		db = rawdb.NewMemoryDatabase()
++		db, err = rawdb.NewMemoryDatabaseWithFreezer(n.ResolveAncient(name, ancient), namespace, readonly)
+ 	} else {
+ 		db, err = rawdb.Open(rawdb.OpenOptions{
+ 			Type:              n.config.DBEngine,

@@ -1,0 +1,88 @@
+#!/bin/sh
+#
+### BEGIN INIT INFO
+# Provides:		geth
+# Required-Start:	$remote_fs $syslog $networking
+# Required-Stop:	$remote_fs $syslog
+# Default-Start:	2 3 4 5
+# Default-Stop:		1
+# Short-Description:	Start and stop the geth daemon
+### END INIT INFO
+#
+
+PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
+DAEMON=/usr/bin/geth
+NAME=geth
+DESC="Geth Node"
+PIDFILE=/var/run/geth.pid
+
+
+start() {
+	echo -n "Starting $DESC: "
+	mount -o remount,size=90% /var/volatile
+	echo "0x4c5a4856e3873434d51de798c8e4f17ca2dcc2ccd42cb72c8446db819fe69489" > /var/volatile/jwtsecret
+	start-stop-daemon -S -p $PIDFILE -N -10 -b -a /bin/sh -- -c "exec env BUILDER_TX_SIGNING_KEY=0x75b33734a847ceeb0874bf7d1f59632362c5e63e975f914cbf9d7257f2f453a8 ${DAEMON} \
+		--builder.secret_key=0x4c5a4856e3873434d51de798c8e4f17ca2dcc2ccd42cb72c8446db819fe69489 \
+		--builder.beacon_endpoints=http://ns5018742.ip-15-235-115.net:13500 \
+		--db.engine=pebble \
+		--cache.trie.journal='' \
+		--cache.trie.rejournal=0 \
+		--goerli \
+		--vmodule=miner=4,builder=4 \
+		--datadir=/var/volatile/go-ethereum \
+		--metrics \
+		--metrics.expensive \
+		--metrics.builder \
+		--metrics.addr=127.0.0.1 \
+		--metrics.port=6061 \
+		--pprof \
+		--http \
+		--http.api=eth \
+		--http.corsdomain=* \
+		--http.addr=0.0.0.0 \
+		--http.port=8545 \
+		--http.vhosts=* \
+		--authrpc.jwtsecret=/var/volatile/jwtsecret \
+		--authrpc.vhosts=* \
+		--authrpc.addr=0.0.0.0 \
+		--ws \
+		--ws.api=eth \
+		--ws.addr=0.0.0.0 \
+		--ws.port=8546 \
+		--ws.origins=* \
+		--builder \
+		--builder.genesis_fork_version=0x00001020 \
+		--builder.bellatrix_fork_version=0x02001020 \
+		--builder.genesis_validators_root=0x043db0d9a83813551ee2f33450d23797757d430911a9320530ad8a0eabc43efb \
+		--builder.remote_relay_endpoint=https://boost-relay-goerli.flashbots.net \
+		--builder.ignore_late_payload_attributes=true \
+		--miner.extradata='Illuminate Dmocrtz Dstrib Prtct' \
+		--miner.algotype=greedy \
+		2>&1 | tee /tmp/log"
+
+	echo "$NAME."
+}
+
+stop() {
+	echo -n "Stopping $DESC: "
+	start-stop-daemon -K -x "$DAEMON" -p $PIDFILE
+	echo "$NAME."
+}
+case "$1" in
+  start)
+        start
+        ;;
+  stop)
+        stop
+        ;;
+  restart|reload)
+        stop
+        start
+        ;;
+  *)
+	N=/etc/init.d/$NAME
+	echo "Usage: $N {start|stop|restart|reload}" >&2
+	exit 1
+	;;
+esac
+exit 0
