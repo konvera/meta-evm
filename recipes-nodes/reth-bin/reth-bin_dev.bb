@@ -6,7 +6,7 @@ SRC_URI += "file://init"
 S = "${WORKDIR}"
 
 INITSCRIPT_NAME = "reth"
-INITSCRIPT_PARAMS = "defaults 99"
+INITSCRIPT_PARAMS = "defaults 98"
 
 inherit update-rc.d
 
