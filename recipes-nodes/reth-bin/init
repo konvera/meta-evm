@@ -15,8 +15,9 @@ DAEMON=/usr/bin/reth
 NAME=reth
 DESC="Reth Node"
 PIDFILE=/var/run/reth.pid
+LOGFILE=/tmp/reth.log
 
-
+# dd if=/dev/urandom bs=32 count=1 2>/dev/null | hexdump -v -e '1/1 "%02x"' > /var/volatile/jwt.hex
 start() {
 	echo -n "Starting $DESC: "
 	mount -o remount,size=90% /var/volatile
@@ -38,7 +39,7 @@ start() {
 		--ws.api "eth,net,trace,web3,rpc,debug,txpool" \
 		--log.stdout.format json \
 		--log.file.max-files 0 \
-		2>&1 | tee /tmp/log"
+		2>&1 | tee ${LOGFILE}"
 	echo "$NAME."
 }
 

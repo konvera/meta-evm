@@ -20,6 +20,7 @@ do_install() {
         install -m 0755 config ${D}${sysconfdir}/rbuilder.config
         install -m 0755 ofac.json ${D}${sysconfdir}/rbuilder.ofac.json
 }
+RDEPENDS:${PN} += "reth-bin cvm-reverse-proxy"
 FILES_${PN} += "${bindir}"
 INHIBIT_PACKAGE_DEBUG_SPLIT = "1"
 INHIBIT_PACKAGE_STRIP = "1"
