@@ -1,4 +1,4 @@
-DESCRIPTION = "Copy flower to the image"
+DESCRIPTION = "Copy reth to the image"
 LICENSE = "CLOSED"
 FILESEXTRAPATHS:prepend := "${THISDIR}:"
 SRC_URI += "file://reth"
@@ -18,5 +18,6 @@ do_install() {
         chmod 755 ${D}${sysconfdir}/init.d/reth
 }
 FILES_${PN} += "${bindir}"
+RDEPENDS:${PN} += "disk-encryption"
 INHIBIT_PACKAGE_DEBUG_SPLIT = "1"
 INHIBIT_PACKAGE_STRIP = "1"
