@@ -9,7 +9,7 @@ inherit cargo_bin
 # Enable network for the compile task allowing cargo to download dependencies
 do_compile[network] = "1"
 
-# DEPENDS += " gcc"
+DEPENDS += "zlib"
 
 # README!
 # extracted from run.do_compile
