@@ -25,6 +25,6 @@ do_install:append() {
     install -m 0755 ${THISDIR}/init ${D}${sysconfdir}/init.d/reth
 }
 
-#RDEPENDS:${PN} += "disk-encryption"
+RDEPENDS:${PN} += "disk-encryption"
 INHIBIT_PACKAGE_DEBUG_SPLIT = "1"
 INHIBIT_PACKAGE_STRIP = "1"
