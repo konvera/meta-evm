@@ -2,34 +2,31 @@ SUMMARY = "Rust Builder"
 HOMEPAGE = "https://github.com/flashbots/rbuilder-private"
 LICENSE = "CLOSED"
 
-inherit cargo_bin pkgconfig
+include rbuilder.inc
 
 python () {
     import os
     origenv = d.getVar("BB_ORIGENV", False)
     git_token = origenv.getVar('GIT_TOKEN') or os.getenv('GIT_TOKEN')
     if not git_token:
-        bb.fatal("GIT_TOKEN environment variable not set or is empty")
+        bb.note("GIT_TOKEN environment variable not set. Will set SRC_URI with ssh protocol")
+        # Set the SRC_URI with the ssh protocol
+        d.setVar('SRC_URI', f"git://git@github.com/flashbots/rbuilder-private;protocol=ssh;branch=main")
     else:
         bb.note("GIT_TOKEN is set")
-    
-    # Set the SRC_URI with the token included
-    d.setVar('SRC_URI', f"git://{git_token}@github.com/flashbots/rbuilder-private.git;protocol=https;branch=main")
+        # Set the SRC_URI with the token included
+        d.setVar('SRC_URI', f"git://{git_token}@github.com/flashbots/rbuilder-private.git;protocol=https;branch=main")
 }
 
-SRCREV = "49eee1f3af9dd7bbeecd331f371c288047d4481c"
+SRCREV = "${AUTOREV}"
 PV = "1.0+git${SRCPV}"
-S = "${WORKDIR}/git"
 
-DEPENDS += "pkgconfig-native openssl libffi virtual/libc virtual/libintl virtual/${TARGET_PREFIX}compilerlibs virtual/${TARGET_PREFIX}gcc"
-RDEPENDS:${PN} += "openssl libffi"
+FILES_${PN} += "${bindir}"
+INHIBIT_PACKAGE_DEBUG_SPLIT = "1"
+INHIBIT_PACKAGE_STRIP = "1"
 
-export CC = "${CCACHE}${HOST_PREFIX}gcc ${HOST_CC_ARCH}${TOOLCHAIN_OPTIONS}"
-export CFLAGS = "${HOST_CFLAGS}"
-export LDFLAGS = "${HOST_LDFLAGS}"
-
-# Enable network access for cargo to fetch dependencies
-do_compile[network] = "1"
+#DEPENDS += "pkgconfig-native openssl libffi virtual/libc virtual/libintl virtual/${TARGET_PREFIX}compilerlibs virtual/${TARGET_PREFIX}gcc"
+#RDEPENDS:${PN} += "openssl libffi"
 
 # Avoid caching sensitive information
 BB_BASEHASH_IGNORE_VARS:append = " GIT_TOKEN"
