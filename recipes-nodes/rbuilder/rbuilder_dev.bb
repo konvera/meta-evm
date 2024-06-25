@@ -21,12 +21,7 @@ python () {
 SRCREV = "${AUTOREV}"
 PV = "1.0+git${SRCPV}"
 
-FILES_${PN} += "${bindir}"
-INHIBIT_PACKAGE_DEBUG_SPLIT = "1"
-INHIBIT_PACKAGE_STRIP = "1"
 
-#DEPENDS += "pkgconfig-native openssl libffi virtual/libc virtual/libintl virtual/${TARGET_PREFIX}compilerlibs virtual/${TARGET_PREFIX}gcc"
-#RDEPENDS:${PN} += "openssl libffi"
 
 # Avoid caching sensitive information
 BB_BASEHASH_IGNORE_VARS:append = " GIT_TOKEN"
