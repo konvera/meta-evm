@@ -20,7 +20,7 @@ do_install() {
 
 do_fetch_json() {
     # change the URL to the cloud init URL to fetch the custom data JSON
-    curl -o ${D}${sysconfdir}/config.json http://localhost:8000/config.json
+    curl -o ${D}${sysconfdir}/config.json http://10.0.2.2:8000/config.json
 }
 
 pkg_postinst_ontarget_${PN}() {

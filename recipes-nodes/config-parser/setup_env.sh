@@ -1,3 +1,3 @@
 #!/bin/sh
 
-eval "$(python3 /usr/bin/parse_json.py /etc/config.json)"
+eval "$(python3 /usr/bin/config_parser.py /etc/config.json)"
