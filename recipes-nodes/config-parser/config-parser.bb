@@ -5,7 +5,8 @@ LIC_FILES_CHKSUM = "file://${COMMON_LICENSE_DIR}/MIT;md5=0835ade698e0bcf8506ecda
 
 FILESEXTRAPATHS:prepend := "${THISDIR}/:"
 SRC_URI = "file://config_parser.py \
-           file://setup_env.sh"
+           file://setup_env.sh \
+           file://fetch-config.sh"
 
 S = "${WORKDIR}"
 
@@ -16,16 +17,15 @@ do_install() {
     
     install -d ${D}${sysconfdir}/profile.d
     echo "source /usr/bin/setup_env.sh" > ${D}${sysconfdir}/profile.d/json_env_vars.sh
+
+    install -d ${D}${sysconfdir}/init.d
+    install -m 0755 ${S}/fetch-config.sh ${D}${sysconfdir}/init.d/fetch-config
 }
 
-do_fetch_json() {
-    # change the URL to the cloud init URL to fetch the custom data JSON
-    curl -o ${D}${sysconfdir}/config.json http://10.0.2.2:8000/config.json
-}
+DEPENDS += "python3"
+RDEPENDS:${PN} += "python3-core python3-json curl"
 
-pkg_postinst_ontarget_${PN}() {
-    source /etc/profile.d/json_env_vars.sh
-}
+inherit update-rc.d
 
-DEPENDS += "bash python3"
-RDEPENDS_${PN} += "bash python3-core python3-json curl"
+INITSCRIPT_NAME = "fetch-config"
+INITSCRIPT_PARAMS = "defaults 90" 
