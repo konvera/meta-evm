@@ -22,7 +22,6 @@ SRCREV = "${AUTOREV}"
 PV = "1.0+git${SRCPV}"
 
 
-
 # Avoid caching sensitive information
 BB_BASEHASH_IGNORE_VARS:append = " GIT_TOKEN"
 BB_DONT_CACHE = "1"

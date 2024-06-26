@@ -9,7 +9,7 @@ inherit cargo_bin update-rc.d
 do_compile[network] = "1"
 
 DEPENDS += "openssl"
-RDEPENDS:${PN} += "openssl reth cvm-reverse-proxy"
+RDEPENDS:${PN} += "openssl reth cvm-reverse-proxy config-parser"
 
 # temporary fix to build rbuilder with libffi - host gcc means we won't get reproducibility
 export CC = "${CCACHE}${HOST_PREFIX}gcc ${HOST_CC_ARCH}${TOOLCHAIN_OPTIONS}"
